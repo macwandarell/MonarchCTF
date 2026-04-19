@@ -17,15 +17,16 @@ void client_run(){
 
     char buffer[255];
     printf("Enter servername: ");
-    scanf("%s",buffer);
+    fgets(buffer,sizeof(buffer),stdin);
+    buffer[strcspn(buffer, "\n")] = '\0';
     server=gethostbyname(buffer);
     if(server==NULL){
         error("Server is off or ip is incorrect",0);
     }
     printf("Enter portno: ");
-    scanf("%s",buffer);
+    fgets(buffer,sizeof(buffer),stdin);
+    buffer[strcspn(buffer, "\n")] = '\0';
     portno=atoi(buffer);
-    getchar();
     sockfd=socket(AF_INET,SOCK_STREAM,0);
     if(sockfd<0){
         error("Error opening socket",0);
@@ -44,13 +45,14 @@ void client_run(){
             error("Read failed",1);
             continue;
         }
-        buffer[n]='\0';buffer[strcspn(buffer, "\r\n")] = '\0';
+        buffer[n]='\0';
         printf("%s",buffer);
         if(!check_exit(buffer,password)){printf("\nExiting the application because of server command\n");break;}
         fflush(stdout);
         int l=strcmp("Please enter password(server67): ",buffer);
         bzero(buffer,sizeof(buffer));
         fgets(buffer,sizeof(buffer),stdin);
+        buffer[strcspn(buffer, "\n")] = '\0';
         n=write(sockfd,buffer,strlen(buffer));
         if(n<0){
             error("Write failed",1);

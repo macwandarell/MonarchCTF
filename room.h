@@ -26,5 +26,6 @@ struct Room{
 
 int make_room(char *code,char *owner);
 int user_join_room(char *code,char *username);
-
+int print_all_rooms(char *buffer);
+int remove_room(char *code);
 #endif
