@@ -49,7 +49,7 @@ void *handle_client(void *arg){
     int n;
     enum State state=AUTH;
     printf("[DEBUG] Initial state: AUTH\n");
-    char buffer[buffer_size];
+    char buffer[server_buffer];
     char current_user[50];
     char current_user_password[50];
     int admin_logged_in=0;
@@ -334,7 +334,7 @@ void *handle_client(void *arg){
                         int random_number=rand()%1000000;
                         printf("[DEBUG] Generated random number: %d\n", random_number);
                         char exit_hash[65];
-                        char data[buffer_size];
+                        char data[server_buffer];
                         sprintf(data,"EXIT%d%s",random_number,current_user_password);
                         printf("[DEBUG] Computing exit hash\n");
                         sha256_sv(data,exit_hash);
@@ -411,10 +411,17 @@ void start_server(){
         printf("[DEBUG] Failed to open rooms file\n");
         error("Error opening rooms file",0);
     }
+    int solutions_file=open("solutions",O_RDWR|O_CREAT,0666);
+    printf("[DEBUG] room_codes fd: %d\n", room_file);
+    if(solutions_file<0){
+        printf("[DEBUG] Failed to open solutions file\n");
+        error("Error opening solutions file",0);
+    }
     printf("[DEBUG] Closing file descriptors\n");
     close(room_file);
     close(user_file);
     close(room_details_file);
+    close(solutions_file);
     printf("[DEBUG] Database files initialized\n");
     int *newsockfd,n;
     struct sockaddr_in server_addr,client_addr;
@@ -491,7 +498,7 @@ int create_room(int newsockfd,char *owner,char *room_code){
         printf("[DEBUG] owner already has a room");
         if(remove_room_code(code)){error("Error removing room code",1);return 1;}
         char *msg="Please login again and join your own room or use another id\n";
-        if(write(newsockfd,msg,sizeof(msg))<0){
+        if(write(newsockfd,msg,strlen(msg))<0){
             error("Error in writing in create room exists",1);
             return 1;
         }

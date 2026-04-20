@@ -22,10 +22,15 @@ struct Room{
     char users[5][50];
     int no_of_users;
     char room_owner[50];
+    char solved_problems[100][50];
 };
 
 int make_room(char *code,char *owner);
 int user_join_room(char *code,char *username);
 int print_all_rooms(char *buffer);
 int remove_room(char *code);
+int update_solved(char *problem,char *code);
+int print_points(char *buffer, size_t buffer_size, char *code);
+int remove_problem_room(char *problem);
+
 #endif

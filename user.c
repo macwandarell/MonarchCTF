@@ -2,21 +2,6 @@
 
 pthread_mutex_t user_lock = PTHREAD_MUTEX_INITIALIZER;
 
-int read_line_fd(int fd, char *buffer, int max_len) {
-    int i = 0;
-    char c;
-
-    while (i < max_len - 1) {
-        int n = read(fd, &c, 1);
-        if (n <= 0) break;
-        if (c == '\n') break;
-        buffer[i++] = c;
-    }
-
-    buffer[i] = '\0';
-    return i;
-}
-
 int make_user(char *username,char *password){
     if(strcmp(username,"admin")==0){
         error("Username cannot be admin",1);

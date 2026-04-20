@@ -18,7 +18,7 @@
 #include <signal.h>
 #include "playground.h"
 #define max_clients 5
-#define buffer_size 300
+#define server_buffer 300
 struct active_users{
     char username[50];
     int socket;

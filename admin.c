@@ -104,6 +104,74 @@ int admin_handler(int newsockfd){
             return 1;
         }
         }
+    else if(strcmp(buffer,"5")==0){
+        bzero(buffer,sizeof(buffer));
+        char problem[11];
+        strcpy(buffer,"Enter problem number to add:");
+        if(write(newsockfd,buffer,strlen(buffer))<0){
+            error("Error writing to socket(admin add problem screen)",1);
+            return 1;}
+        n=read(newsockfd,buffer,sizeof(buffer));
+        if(n<0){
+            error("Error reading from socket(admin add problem screen)",1);
+            return 1;}
+        buffer[n]='\0';buffer[strcspn(buffer,"\r\n")]='\0';
+        strncpy(problem,buffer,10);
+        problem[10]='\0';
+        char solution[256];
+        strcpy(buffer,"Enter solution:");
+        if(write(newsockfd,buffer,strlen(buffer))<0){
+            error("Error writing to socket(admin add problem screen)",1);
+            return 1;}
+        n=read(newsockfd,buffer,sizeof(buffer));
+        if(n<0){
+            error("Error reading from socket(admin add problem screen)",1);
+            return 1;}
+        buffer[n]='\0';buffer[strcspn(buffer,"\r\n")]='\0';
+        strncpy(solution,buffer,255);
+        solution[255]='\0';
+        if(add_new_problem(problem,solution)){
+            error("Error adding new problem",1);
+            if(write(newsockfd,"Please try again\n",sizeof("Please try again\n"))<0){
+                error("Error writing to socker(admin add problem screen)",1);
+                return 1;
+            }
+            continue;
+        }
+        bzero(buffer,sizeof(buffer));
+        strcpy(buffer,"Please check once if the problem is added\n");
+        if(write(newsockfd,buffer,strlen(buffer))<0){
+            error("Error writing to socket(admin add problem screen)",1);
+            return 1;}
+    }
+    else if(strcmp(buffer,"6")==0){
+        bzero(buffer,sizeof(buffer));
+        char problem[11];
+        strcpy(buffer,"Enter problem number to remove:");
+        if(write(newsockfd,buffer,strlen(buffer))<0){
+            error("Error writing to socket(admin remove problem screen)",1);
+            return 1;}
+        n=read(newsockfd,buffer,sizeof(buffer));
+        if(n<0){
+            error("Error reading from socket(admin remove problem screen)",1);
+            return 1;}
+        buffer[n]='\0';buffer[strcspn(buffer,"\r\n")]='\0';
+        strncpy(problem,buffer,10);
+        problem[10]='\0';
+        if(remove_problem(problem)){
+            bzero(buffer,sizeof(buffer));
+            strcpy(buffer,"Error occured removing the problem\n");
+        if(write(newsockfd,buffer,strlen(buffer))<0){
+            error("Error writing to socket(admin remove problem screen)",1);
+            return 1;}
+            continue;
+        }
+        bzero(buffer,sizeof(buffer));
+        strcpy(buffer,"Please check once if the problem is removed\n");
+        if(write(newsockfd,buffer,strlen(buffer))<0){
+            error("Error writing to socket(admin remove problem screen)",1);
+            return 1;}
+    }
     else if(strcmp(buffer,"7")==0){
         admin_logout();
         break;

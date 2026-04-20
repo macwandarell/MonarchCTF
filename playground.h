@@ -1,3 +1,6 @@
+#ifndef PLAYGROUND_H
+#define PLAYGROUND_H
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -12,6 +15,12 @@
 #include <sys/select.h>
 #include <sys/wait.h>
 #include <sys/stat.h>
+#include <pthread.h>
+#include <fcntl.h>
+#include "room.h"
+#include <pwd.h>
+#include <grp.h>
+
 
 
 
@@ -21,8 +30,16 @@
 
 extern char* active_rooms[5];
 extern int current_active;
+extern pthread_mutex_t playground_lock;
+extern pthread_mutex_t playground_problem_lock;
+extern pthread_mutex_t playground_user_lock;
 
 int run_playground(int newsockfd,char *code);
 void new_room_setup(char *code);
+int submit_handler(char *cmd_buffer,int newsockfd,char *code);
+int points_handler(int newsockfd,char *code);
+int add_new_problem(char *problem,char *solution);
+int solutions_file_opener();
+int remove_problem(char *problem);
 
-
+#endif

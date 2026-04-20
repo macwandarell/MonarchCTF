@@ -18,7 +18,6 @@ extern pthread_mutex_t user_lock;
 
 int make_user(char *username,char *password);
 int user_check(char *username,char *password);
-int read_line_fd(int fd, char *buffer, int max_len);
 int user_logout(char *username);
 int print_all_users(char *buffer);
 int user_remove(char *username);
