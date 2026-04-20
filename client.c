@@ -13,7 +13,8 @@ void client_run(){
     int sockfd,portno,n;
     struct sockaddr_in server_addr;
     struct hostent *server;
-    char password[50];
+    char password[51];
+    bzero(password, sizeof(password));
 
     char buffer[255];
     printf("Enter servername: ");
@@ -39,45 +40,77 @@ void client_run(){
         error("Connect function failed",0);
     }
     while(1){
-        bzero(buffer,sizeof(buffer));
-        n=read(sockfd,buffer,sizeof(buffer));
-        if(n<0){
-            error("Read failed",1);
-            continue;
+        int skip_stdin = 0;
+        fd_set fds;
+        FD_ZERO(&fds);
+        FD_SET(sockfd,&fds);
+        FD_SET(0,&fds);
+        int maxfd=(sockfd>0?sockfd: 0)+1;
+
+        if(select(maxfd,&fds,NULL,NULL,NULL)<0){
+            error("Select error",0);
+            break;
         }
-        buffer[n]='\0';
-        printf("%s",buffer);
-        if(!check_exit(buffer,password)){printf("\nExiting the application because of server command\n");break;}
-        fflush(stdout);
-        int l=strcmp("Please enter password(server67): ",buffer);
-        bzero(buffer,sizeof(buffer));
-        fgets(buffer,sizeof(buffer),stdin);
-        buffer[strcspn(buffer, "\n")] = '\0';
-        n=write(sockfd,buffer,strlen(buffer));
-        if(n<0){
-            error("Write failed",1);
-            printf("Try restarting....\n");
-            continue;
+        if(FD_ISSET(sockfd,&fds)){
+            bzero(buffer,sizeof(buffer));
+            n=read(sockfd,buffer,sizeof(buffer));
+            if(n<=0){
+                printf("\nConnection closed by the server\n");
+                break;
+            }
+            write(1,buffer,n);
+            if(strstr(buffer,"Please enter password(server67): ")!=NULL){
+                bzero(buffer,sizeof(buffer));
+                n=read(0,buffer,sizeof(buffer));
+                if(n<=0){
+                    printf("Cant read password\n:");
+                    break;
+                }
+                buffer[strcspn(buffer,"\n")]='\0';
+                strncpy(password,buffer,sizeof(password)-1);
+                password[sizeof(password)-1]='\0';
+                if(write(sockfd,password,strlen(password))<0){
+                    error("Write failed",1);
+                    break;
+                }
+                skip_stdin = 1;
+            }
         }
-        if(l==0){
-            strcpy(password,buffer);
+        if(!skip_stdin && FD_ISSET(0,&fds)){
+            bzero(buffer,sizeof(buffer));
+            n = read(0,buffer,sizeof(buffer));
+            if(n<=0){
+                error("user->server input problem",1);
+                break;
+            }
+            if(write(sockfd,buffer,n)<0){
+                error("Write failed",1);
+                break;
+            }
         }
+        
     }
     close(sockfd);
     return;
 
 }
 
+
 int check_exit(char *buffer,char *password){
-    char command[10];
-    int random_number;
-    char received_hash[65];
-    sscanf(buffer, "%[^|]|%d|%s", command, &random_number, received_hash);
+    const char *exit_msg = strstr(buffer, "EXIT|");
+    if(exit_msg == NULL){
+        return 1;
+    }
+    int random_number = 0;
+    char received_hash[65] = {0};
+    if(sscanf(exit_msg, "EXIT|%d|%64s", &random_number, received_hash) != 2){
+        return 1;
+    }
     char data[256];
-    sprintf(data, "EXIT%d%s", random_number, password);
+    snprintf(data, sizeof(data), "EXIT%d%s", random_number, password);
     char computed_hash[65];
     sha256_cl(data,computed_hash);
-    if(strcmp(command,"EXIT")==0 && strcmp(received_hash,computed_hash)==0){
+    if(strcmp(received_hash,computed_hash)==0){
         return 0;}
     return 1;}
 

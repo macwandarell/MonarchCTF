@@ -19,6 +19,7 @@ int make_room(char *code,char *owner){
     //check first if owner is already in a room
     lseek(fd,0,SEEK_SET);
     struct Room temp;
+    memset(&temp,0,sizeof(temp));
     //first check wheter user already exists in any of the rooms
     while(read(fd,&temp,sizeof(temp))>0){
         for(int i=0;i<temp.no_of_users;i++){
@@ -54,14 +55,19 @@ int user_join_room(char *code,char *username){
     struct Room room;
     int exists=0;
     lseek(fd,0,SEEK_SET);
-    //first check wheter user already exists in any of the rooms
+    //first check wheter user already exists in any of the rooms other than the current one
     while(read(fd,&room,sizeof(room))>0){
         for(int i=0;i<room.no_of_users;i++){
-            if(strncmp(room.users[i],username,50)==0){
+            if(strncmp(room.users[i],username,50)==0&&strncmp(room.code,code,10)!=0){
                 error("User already in a room",1);
                 close(fd);
                 pthread_mutex_unlock(&room_lock);
                 return 1;
+            }
+            else if(strncmp(room.users[i],username,50)==0&&strncmp(room.code,code,10)==0){
+                close(fd);
+                pthread_mutex_unlock(&room_lock);
+                return 0;
             }
         }
     }

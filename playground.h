@@ -8,8 +8,21 @@
 #include <netinet/in.h>
 #include <netdb.h>
 #include <openssl/sha.h>
+#include <pty.h>
+#include <sys/select.h>
+#include <sys/wait.h>
+#include <sys/stat.h>
 
 
-#define playground_buffer 
 
-void run_playground();
+
+#define playground_buffer 10000
+#define max_rooms 5
+
+extern char* active_rooms[5];
+extern int current_active;
+
+int run_playground(int newsockfd,char *code);
+void new_room_setup(char *code);
+
+

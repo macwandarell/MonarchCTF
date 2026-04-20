@@ -16,7 +16,7 @@
 #include <openssl/sha.h>
 #include "admin.h"
 #include <signal.h>
-
+#include "playground.h"
 #define max_clients 5
 #define buffer_size 300
 struct active_users{
@@ -38,11 +38,11 @@ extern int current_active_users;
 
 void start_server();
 void *handle_client(void *arg);
-int create_room(int newsockfd,char *owner);
-int join_room(int newsockfd,char *buffer,char *current_user);
+int create_room(int newsockfd,char *owner,char *room_code);
+int join_room(int newsockfd,char *buffer,char *current_user,char *room_code);
 int generate_room_code(char *code);
 void sha256_sv(const char *input, char output[65]);
 int remove_active_user(char *username);
 void handle_signal(int sig);
-
+int remove_room_code(char *code);
 #endif

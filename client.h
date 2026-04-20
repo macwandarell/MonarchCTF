@@ -8,6 +8,7 @@
 #include <netinet/in.h>
 #include <netdb.h>
 #include <openssl/sha.h>
+#include <sys/select.h>
 
 
 
