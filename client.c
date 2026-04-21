@@ -1,5 +1,26 @@
 #include "client.h"
 
+struct termios orig, raw_mode;
+int raw_mode_enabled=0;
+
+void enable_raw(){
+	if(raw_mode_enabled)return;
+    	tcgetattr(0,&orig);
+    	raw_mode=orig;
+    	cfmakeraw(&raw_mode);
+    	tcsetattr(0,TCSANOW,&raw_mode);
+    	raw_mode_enabled=1;
+ }
+ 
+ void disable_raw(){
+ if(raw_mode_enabled){
+ tcsetattr(0,TCSANOW,&orig);
+ raw_mode_enabled=0;}}
+ 
+void signal_handler(int sig){
+	disable_raw();
+	exit(0);
+}
 void sha256_cl(const char *input, char output[65]) {
     unsigned char hash[SHA256_DIGEST_LENGTH];
     SHA256((unsigned char*)input, strlen(input), hash);
@@ -10,6 +31,8 @@ void sha256_cl(const char *input, char output[65]) {
 }
 
 void client_run(){
+	signal(SIGINT,signal_handler);
+	signal(SIGTERM,signal_handler);
     int sockfd,portno,n;
     struct sockaddr_in server_addr;
     struct hostent *server;
@@ -39,6 +62,7 @@ void client_run(){
     if(connect(sockfd,(struct sockaddr*)&server_addr,sizeof(server_addr))<0){
         error("Connect function failed",0);
     }
+    
     while(1){
         int skip_stdin = 0;
         fd_set fds;
@@ -59,7 +83,10 @@ void client_run(){
                 break;
             }
             write(1,buffer,n);
-            if(strstr(buffer,"Please enter password(server67): ")!=NULL){
+            if(strstr(buffer,"Your session has been started(server67)")!=NULL){
+            		enable_raw();
+	}
+            else if(strstr(buffer,"Please enter password(server67): ")!=NULL){
                 bzero(buffer,sizeof(buffer));
                 n=read(0,buffer,sizeof(buffer));
                 if(n<=0){
@@ -90,6 +117,7 @@ void client_run(){
         }
         
     }
+    disable_raw();
     close(sockfd);
     return;
 

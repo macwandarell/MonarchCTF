@@ -221,6 +221,12 @@ int update_solved(char *problem,char *code){
         pthread_mutex_unlock(&room_lock);
         return 1;
     }
+    for(int i=0;i<100;i++){
+    	if(strncmp(room.solved_problems[i],problem,50)==0){
+    	close(fd);
+    	error("Room is already solved",1);
+    	pthread_mutex_unlock(&room_lock);
+    	return 1;}}
     int empty_slot=-1;
     for(int i=0;i<100;i++){
         if(room.solved_problems[i][0]=='\0'){

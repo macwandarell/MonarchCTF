@@ -40,7 +40,7 @@ extern pthread_mutex_t playground_active_lock;
 
 int run_playground(int newsockfd,char *code);
 void new_room_setup(char *code);
-int submit_handler(char *cmd_buffer,int newsockfd,char *code);
+int submit_handler(char *cmd_buffer,int newsockfd);
 int points_handler(int newsockfd,char *code);
 int add_new_problem(char *problem,char *solution);
 int solutions_file_opener();

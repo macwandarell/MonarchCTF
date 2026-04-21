@@ -20,6 +20,9 @@ void new_room_setup(char *code){
     snprintf(cmd,sizeof(cmd),"cp -r /home/ctf/jail/* %s/",path);
     system(cmd);
     bzero(cmd,sizeof(cmd));
+    snprintf(cmd,sizeof(cmd),"mount -t devpts devpts /hom/ctf/%s/dev/pts",code);
+    system(cmd);
+    bzero(cmd,sizeof(cmd));
     snprintf(cmd,sizeof(cmd),"cp -r /home/ctf/problems/* %s/",prob_path);
     system(cmd);
     pthread_mutex_unlock(&playground_problem_lock);
@@ -191,15 +194,13 @@ int run_playground(int newsockfd,char *code){
         rl.rlim_cur=256*1024*1024;
         rl.rlim_max=256*1024*1024;
         setrlimit(RLIMIT_AS,&rl);
-
+	setenv("TERM","xterm-256color",1);
         pthread_mutex_unlock(&playground_user_lock);
-        execl("/bin/bash","bash",NULL);
+        execl("/bin/bash","bash","-i",NULL);
         error("execl error",1);
         return 1;
     }
     char buffer[playground_buffer];
-    char cmd_buffer[512];
-    int cmd_len=0;
     while(1){
         fd_set fds;
         FD_ZERO(&fds);
@@ -213,43 +214,27 @@ int run_playground(int newsockfd,char *code){
         if(FD_ISSET(main_fd,&fds)){
             int n=read(main_fd,buffer,sizeof(buffer));
             if(n<=0)break;
-            if(write(newsockfd,buffer,n)<0){
+            int total=0;
+            while(total<n){
+            int w=write(newsockfd,buffer+total,n-total);
+            if(w<=0){
                 error("error occured in writing in run_playground",1);
                 return 1;
-            };
+            }
+            total+=w;}
         }
         if(FD_ISSET(newsockfd,&fds)){
             int n=read(newsockfd,buffer,sizeof(buffer));
             if(n<=0) break;
-            for(int i=0;i<n;i++){
-            if(cmd_len<sizeof(cmd_buffer)-1){
-                    cmd_buffer[cmd_len++]=buffer[i];
-                }
-            if(buffer[i]=='\n'){
-                cmd_buffer[cmd_len-1]='\0';
-                if(strncmp(cmd_buffer,"submit67",8)==0){
-                    if(submit_handler(cmd_buffer,newsockfd,code)){
-                        error("error in submit handler",1);
-                        return 1;
-                    }
-                }
-                else if(strncmp(cmd_buffer,"points67",8)==0){
-                    if(points_handler(newsockfd,code)){
-                        error("error in submit handler",1);
-                        return 1;
-                    }
-                }
-                else{
-                    cmd_buffer[cmd_len-1]='\n';
-                    if(write(main_fd,cmd_buffer,cmd_len)<0){
-                        error("error occured in writing in run_playground",1);
-                        return 1;
-                    }
-                }
-                cmd_len=0;
-            }}
+            int total=0;
+            while(total<n){
+            int w=write(main_fd,buffer+total,n-total);
+            if(w<=0){
+            error("write to pty failed",1);
+            return 1;
         }
-    }
+        total+=w;}
+    }}
     pthread_mutex_lock(&playground_active_lock);
     if(active_users[exists]==1){
     for(int i=0;i<max_rooms;i++){
@@ -276,6 +261,16 @@ int run_playground(int newsockfd,char *code){
 
 }
 
+
+
+//the solutions logic i am cutting off for now
+//instead simply what i will do is i will add a .zip file manually which has the password of the zip as the solution to the ctf problem, if user can open that zip then they are done
+//i actually have to make another script which simply can call these below functions when the user does submit or points
+//the script in itself is correct, it just needs to be wrapped around something to make it work
+//something like a helper script running in the bash which can call these backend functions
+
+
+
 int solutions_file_opener(){
     pthread_mutex_lock(&playground_lock);
     int fd=open("solutions",O_RDWR);
@@ -286,14 +281,14 @@ int solutions_file_opener(){
     }
     return fd;
 }
-int submit_handler(char *cmd_buffer,int newsockfd,char *code){
+int submit_handler(char *cmd_buffer,int newsockfd){
     int fd=solutions_file_opener();
     if(fd==-1){return 1;}
-    char *cmd=strtok(cmd_buffer," \n");
-    char *prob=strtok(NULL," \n");
-    char *ans=strtok(NULL," \n");
+    char *code=strtok(cmd_buffer,":\n");
+    char *prob=strtok(NULL,":\n");
+    char *ans=strtok(NULL,":\n");
 
-    if(!cmd||!prob||!ans||strcmp(cmd,"submit67")!=0){
+    if(!code||!prob||!ans||(strlen(code)!=10)){
         error("Invalid format",1);
         if(write(newsockfd,"Invalid format\n",sizeof("Invalid format\n"))<0){
             error("Write issue in submit handler",1);
@@ -378,10 +373,12 @@ int add_new_command(char *name){
 
     if(access(src,X_OK)!=0){
         error("File doesnt exists",1);
+        pthread_mutex_unlock(&playground_problem_lock);
         return 1;
     }
     if(!realpath(src,real_path)){
         error("Error resolving path",1);
+        pthread_mutex_unlock(&playground_problem_lock);
         return 1;
     }
     snprintf(cmd,sizeof(cmd),"cp -n '%s' /home/ctf/jail/bin/",real_path);

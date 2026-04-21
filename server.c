@@ -72,7 +72,7 @@ void *handle_client(void *arg){
                 printf("[DEBUG] Entering AUTH state\n");
                 bzero(buffer,sizeof(buffer));
                 strcpy(buffer,logo);
-                strcat(buffer,"Welcome to MonarchCTF! Please enter 1 if you want to register or 2 if you want to login:\n");
+                strcat(buffer,"Welcome to MonarchCTF! Please enter 1 if you want to register or 2 if you want to login or 3 for submissions or 4 for points:\n");
                 printf("[DEBUG] Sending welcome message to client\n");
                 if(write(newsockfd,buffer,strlen(buffer))<0){
                     printf("[DEBUG] write() failed for welcome message\n");
@@ -93,7 +93,7 @@ void *handle_client(void *arg){
                 }
                 buffer[n]='\0';buffer[strcspn(buffer, "\r\n")] = '\0';
                 printf("[DEBUG] Received choice: %s\n", buffer);
-                if(strcmp(buffer,"1")!=0 && strcmp(buffer,"2")!=0){
+                if(strcmp(buffer,"1")!=0 && strcmp(buffer,"2")!=0&&strcmp(buffer,"3")!=0&&strcmp(buffer,"4")!=0){
                     printf("[DEBUG] Invalid choice received: %s\n", buffer);
                     error("Invalid option selected by client",1);
                     continue;
@@ -252,6 +252,58 @@ void *handle_client(void *arg){
                             pthread_mutex_unlock(&server_lock);
                             printf("[DEBUG] Transitioning to ROOM state\n");
                             state=ROOM;}
+                            else if(strcmp(buffer,"3")==0){
+                            	if(write(newsockfd,"Write your solution as(ignore the braces): (room_code:prob_no:solution:) :",strlen("Write your solution as(ignore the braces): (room_code:prob_no:solution:) :"))<0){
+                            	printf("[DEBUG] write() failed for submission message\n");
+                                error("Error writing to socket( submission creen)",1);
+                                state=EXIT;
+                                break;
+                            	}
+                            	n=read(newsockfd,buffer,sizeof(buffer));
+		                printf("[DEBUG] read() returned %d bytes for submission\n", n);
+		                if(n<=0){
+		                printf("[DEBUG] read() failed for submission\n");
+		                error("Error reading from socket(submission screen)",1);
+		                state=EXIT;
+		                break;}
+		                buffer[n]='\0';buffer[strcspn(buffer, "\r\n")] = '\0';
+		                if(submit_handler(buffer,newsockfd)){
+					if(write(newsockfd,"Please try again, server error occured\n",strlen("Please try again, server error occured\n"))<0){
+                            	printf("[DEBUG] write() failed for submission message\n");
+                                error("Error writing to socket(  submission screen)",1);
+                                state=EXIT;
+                                break;
+                            	}				
+					}
+				state=EXIT;
+				break;
+                            }
+                            else if(strcmp(buffer,"4")==0){
+                            	if(write(newsockfd,"Write team code to see points:",strlen("Write team code to see points:"))<0){
+                            	printf("[DEBUG] write() failed for points message\n");
+                                error("Error writing to socket( points screen)",1);
+                                state=EXIT;
+                                break;
+                            	}
+                            	n=read(newsockfd,buffer,sizeof(buffer));
+		                printf("[DEBUG] read() returned %d bytes for points\n", n);
+		                if(n<=0){
+		                printf("[DEBUG] read() failed for points\n");
+		                error("Error reading from socket(points screen)",1);
+		                state=EXIT;
+		                break;}
+		                buffer[n]='\0';buffer[strcspn(buffer, "\r\n")] = '\0';
+		                if(points_handler(newsockfd,buffer)){
+					if(write(newsockfd,"Please try again, server error occured\n",strlen("Please try again, server error occured\n"))<0){
+                            	printf("[DEBUG] write() failed for points message\n");
+                                error("Error writing to socket(  points screen)",1);
+                                state=EXIT;
+                                break;
+                            	}				
+					}
+				state=EXIT;
+				break;
+                            }
                             break;
 
             case ROOM:
@@ -328,6 +380,12 @@ void *handle_client(void *arg){
                         }}
                         break;
             case PLAY:
+            		bzero(buffer,sizeof(buffer));
+            		strcpy(buffer,"Your session has been started(server67)");
+            		if(write(newsockfd,buffer,sizeof(buffer))<0){
+            			error("Error in user write to socket",1);
+            			state=EXIT;
+            			break;}
                         printf("[DEBUG] Entering PLAY state for user: %s\n", current_user);
                         bzero(buffer,sizeof(buffer));
                         if(run_playground(newsockfd,room_code)){
@@ -434,6 +492,49 @@ void start_server(){
     close(room_details_file);
     close(solutions_file);
     printf("[DEBUG] Database files initialized\n");
+    //not debugging or checking anything here, mkdir just returns -1 when directory already exists
+    char path[256];
+    snprintf(path,sizeof(path),"/home/ctf");
+    char jail_path[300];
+    snprintf(jail_path,sizeof(jail_path),"/home/ctf/jail");
+    char bin_path[320];
+    snprintf(bin_path,sizeof(bin_path),"%s/bin",jail_path);
+    char lib_path[320];
+    snprintf(lib_path,sizeof(lib_path),"%s/lib",jail_path);
+    char lib64_path[320];
+    snprintf(lib64_path,sizeof(lib64_path),"%s/lib64",jail_path);
+    char problems_path[320];
+    snprintf(problems_path,sizeof(problems_path),"%s/problems",jail_path);
+    char usr_path[320];
+    snprintf(usr_path,sizeof(usr_path),"%s/usr",jail_path);
+    char share_path[340];
+    snprintf(share_path,sizeof(share_path),"%s/share",usr_path);
+    char terminfo_path[360];
+    snprintf(terminfo_path,sizeof(terminfo_path),"%s/terminfo",share_path);
+    char x_path[360];
+    snprintf(x_path,sizeof(x_path),"%s/x",terminfo_path);
+    char dev_path[360];
+    snprintf(dev_path,sizeof(dev_path),"%s/dev",jail_path);
+    char pts_path[380];
+    snprintf(pts_path,sizeof(pts_path),"%s/dev",dev_path);
+    mkdir(path,S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH);
+    mkdir(jail_path,S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH);
+    mkdir(bin_path,S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH);
+    mkdir(lib_path,S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH);
+    mkdir(lib64_path,S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH);
+    mkdir(problems_path,S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH);
+    mkdir(usr_path,S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH);
+    mkdir(share_path,S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH);
+    mkdir(terminfo_path,S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH);
+    mkdir(x_path,S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH);
+    mkdir(dev_path,S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH);
+    mkdir(pts_path,S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH);
+    system("cp /usr/share/terminfo/x/xterm /home/ctf/jail/usr/share/terminfo/x/");
+    system("cp /usr/share/terminfo/x/xterm-256color /home/ctf/jail/usr/share/terminfo/x/");
+    //for the below you can also use mknod, but i am not doing that here because cp -a is just faster for me to do
+    system("cp -a /dev/null /home/ctf/jail/dev/");
+    system("cp -a /dev/tty /home/ctf/jail/dev/");
+    system("cp -a /dev/urandom /home/ctf/jail/dev/");
     int *newsockfd,n;
     struct sockaddr_in server_addr,client_addr;
     pthread_t tid;
