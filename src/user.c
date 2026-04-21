@@ -8,7 +8,7 @@ int make_user(char *username,char *password){
         return 2;
     }
     pthread_mutex_lock(&user_lock);
-    int fd=open("users",O_RDWR);
+    int fd=open("data/users",O_RDWR);
     if(fd<0){
         error("Error opening users file",1);
         pthread_mutex_unlock(&user_lock);
@@ -65,7 +65,7 @@ int user_check(char *username,char *password){
         pthread_mutex_unlock(&user_lock);
         return 2;
     }       
-    int fd=open("users",O_RDWR);
+    int fd=open("data/users",O_RDWR);
     if(fd<0){
         error("Error opening users file",1);
         return 1;
@@ -107,7 +107,7 @@ int user_logout(char *username){
         return 0;
     }
     pthread_mutex_lock(&user_lock);
-    int fd=open("users",O_RDWR);
+    int fd=open("data/users",O_RDWR);
     if(fd<0){
         error("Error opening users file",1);
         return 1;
@@ -141,7 +141,7 @@ int user_logout(char *username){
 
 int print_all_users(char *buffer){
     pthread_mutex_lock(&user_lock);
-    int fd=open("users",O_RDONLY);
+    int fd=open("data/users",O_RDONLY);
     if(fd<0){
         error("Error opening users file",1);
         pthread_mutex_unlock(&user_lock);
@@ -167,7 +167,7 @@ int print_all_users(char *buffer){
 
 int user_remove(char *username){
     pthread_mutex_lock(&user_lock);
-    int fd=open("users",O_RDWR);
+    int fd=open("data/users",O_RDWR);
     if(fd<0){
         error("Error opening users file",1);
         pthread_mutex_unlock(&user_lock);
@@ -188,7 +188,7 @@ int user_remove(char *username){
         return 1;
     }
     //make temp file and move all other users to it
-    int temp_fd=open("temp_users",O_RDWR|O_CREAT|O_TRUNC,0666);
+    int temp_fd=open("data/temp_users",O_RDWR|O_CREAT|O_TRUNC,0666);
     if(temp_fd<0){
         pthread_mutex_unlock(&user_lock);
         error("Error opening temp file",1);
@@ -207,13 +207,13 @@ int user_remove(char *username){
     }
     close(fd);
     //remove users file and rename temp file to users
-    if(remove("users")){
+    if(remove("data/users")){
         error("Error removing users file",1);
         close(temp_fd);
         pthread_mutex_unlock(&user_lock);
         return 1;
     }
-    if(rename("temp_users","users")){
+    if(rename("data/temp_users","data/users")){
         error("Error renaming temp file",1);
         close(temp_fd);
         pthread_mutex_unlock(&user_lock);

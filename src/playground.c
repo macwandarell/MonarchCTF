@@ -67,7 +67,7 @@ int remove_problem(char *problem){
         pthread_mutex_unlock(&playground_problem_lock);
         return 1;
     }
-    int temp_fd=open("temp_solutions",O_WRONLY|O_CREAT|O_TRUNC,0666);
+    int temp_fd=open("data/temp_solutions",O_WRONLY|O_CREAT|O_TRUNC,0666);
     if(temp_fd<0){
         error("Error opening temp solutions file",1);
         close(fd);
@@ -88,14 +88,14 @@ int remove_problem(char *problem){
     close(fd);
     close(temp_fd);
     
-    if(remove("solutions")){
+    if(remove("data/solutions")){
         error("Error removing solutions file",1);
         pthread_mutex_unlock(&playground_lock);
         pthread_mutex_unlock(&playground_problem_lock);
         return 1;
     }
     
-    if(rename("temp_solutions","solutions")){
+    if(rename("data/temp_solutions","data/solutions")){
         error("Error renaming temp solutions file",1);
         pthread_mutex_unlock(&playground_lock);
         pthread_mutex_unlock(&playground_problem_lock);
@@ -273,7 +273,7 @@ int run_playground(int newsockfd,char *code){
 
 int solutions_file_opener(){
     pthread_mutex_lock(&playground_lock);
-    int fd=open("solutions",O_RDWR);
+    int fd=open("data/solutions",O_RDWR);
         if(fd<0){
         error("Error opening solutions file",1);
         pthread_mutex_unlock(&playground_lock);

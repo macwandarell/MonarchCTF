@@ -13,7 +13,7 @@ int make_room(char *code,char *owner){
         room.solved_problems[i][0]='\0';
     }
     pthread_mutex_lock(&room_lock);
-    int fd=open("rooms",O_RDWR);
+    int fd=open("data/rooms",O_RDWR);
     if(fd<0){
         error("Error opening rooms file",1);
         pthread_mutex_unlock(&room_lock);
@@ -50,7 +50,7 @@ int make_room(char *code,char *owner){
 
 int user_join_room(char *code,char *username){
     pthread_mutex_lock(&room_lock);
-    int fd=open("rooms",O_RDWR);
+    int fd=open("data/rooms",O_RDWR);
     if(fd<0){
         error("Error opening rooms file",1);
         pthread_mutex_unlock(&room_lock);
@@ -109,7 +109,7 @@ int user_join_room(char *code,char *username){
 
 int print_all_rooms(char *buffer){
     pthread_mutex_lock(&room_lock);
-    int fd=open("rooms",O_RDONLY);
+    int fd=open("data/rooms",O_RDONLY);
     if(fd<0){
         error("Error opening rooms file",1);
         pthread_mutex_unlock(&room_lock);
@@ -143,7 +143,7 @@ int print_all_rooms(char *buffer){
 
 int remove_room(char *code){
     pthread_mutex_lock(&room_lock);
-    int fd=open("rooms",O_RDWR);
+    int fd=open("data/rooms",O_RDWR);
     if(fd<0){
         error("Error opening rooms file",1);
         pthread_mutex_unlock(&room_lock);
@@ -164,7 +164,7 @@ int remove_room(char *code){
         pthread_mutex_unlock(&room_lock);
         return 1;
     }
-    int temp_fd=open("temp_rooms",O_RDWR|O_CREAT|O_TRUNC,0666);
+    int temp_fd=open("data/temp_rooms",O_RDWR|O_CREAT|O_TRUNC,0666);
     if(temp_fd<0){
         pthread_mutex_unlock(&room_lock);
         error("Error opening temp room file",1);
@@ -178,13 +178,13 @@ int remove_room(char *code){
     }
     close(fd);
     //remove rooms file and rename temp file to rooms
-    if(remove("rooms")){
+    if(remove("data/rooms")){
         error("Error removing rooms file",1);
         close(temp_fd);
         pthread_mutex_unlock(&room_lock);
         return 1;
     }
-    if(rename("temp_rooms","rooms")){
+    if(rename("data/temp_rooms","data/rooms")){
         error("Error renaming temp rooms file",1);
         close(temp_fd);
         pthread_mutex_unlock(&room_lock);
@@ -198,7 +198,7 @@ int remove_room(char *code){
 
 int update_solved(char *problem,char *code){
     pthread_mutex_lock(&room_lock);
-    int fd=open("rooms",O_RDWR);
+    int fd=open("data/rooms",O_RDWR);
     if(fd<0){
         error("Error opening rooms file",1);
         pthread_mutex_unlock(&room_lock);
@@ -256,7 +256,7 @@ int update_solved(char *problem,char *code){
 
 int print_points(char* buffer, size_t buffer_size,char *code){
     pthread_mutex_lock(&room_lock);
-    int fd=open("rooms",O_RDWR);
+    int fd=open("data/rooms",O_RDWR);
     if(fd<0){
         error("Error opening rooms file",1);
         pthread_mutex_unlock(&room_lock);
@@ -297,7 +297,7 @@ int print_points(char* buffer, size_t buffer_size,char *code){
 
 int remove_problem_room(char *problem){
     pthread_mutex_lock(&room_lock);
-    int fd=open("rooms",O_RDWR);
+    int fd=open("data/rooms",O_RDWR);
     if(fd<0){
         error("Error opening rooms file",1);
         pthread_mutex_unlock(&room_lock);

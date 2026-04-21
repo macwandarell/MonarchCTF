@@ -462,25 +462,25 @@ void start_server(){
     scanf("%d",&portno);
     printf("[DEBUG] Port number entered: %d\n", portno);
     printf("[DEBUG] Opening database files...\n");
-    int room_file=open("room_codes",O_RDWR|O_CREAT,0666);
+    int room_file=open("data/room_codes",O_RDWR|O_CREAT,0666);
     printf("[DEBUG] room_codes fd: %d\n", room_file);
     if(room_file<0){
         printf("[DEBUG] Failed to open room_codes file\n");
         error("Error opening room codes file",0);
     }
-    int user_file=open("users",O_RDWR|O_CREAT,0666);
+    int user_file=open("data/users",O_RDWR|O_CREAT,0666);
     printf("[DEBUG] users fd: %d\n", user_file);
     if(user_file<0){
         printf("[DEBUG] Failed to open users file\n");
         error("Error opening users file",0);
     }
-    int room_details_file=open("rooms",O_RDWR|O_CREAT,0666);
+    int room_details_file=open("data/rooms",O_RDWR|O_CREAT,0666);
     printf("[DEBUG] rooms fd: %d\n", room_details_file);
     if(room_details_file<0){
         printf("[DEBUG] Failed to open rooms file\n");
         error("Error opening rooms file",0);
     }
-    int solutions_file=open("solutions",O_RDWR|O_CREAT,0666);
+    int solutions_file=open("data/solutions",O_RDWR|O_CREAT,0666);
     printf("[DEBUG] room_codes fd: %d\n", room_file);
     if(solutions_file<0){
         printf("[DEBUG] Failed to open solutions file\n");
@@ -643,7 +643,7 @@ int generate_room_code(char *code){
     pthread_mutex_lock(&room_lock);
     printf("[DEBUG] room_lock acquired\n");
 
-    int fd=open("room_codes",O_RDWR);
+    int fd=open("data/room_codes",O_RDWR);
     printf("[DEBUG] room_codes fd: %d\n", fd);
     if(fd<0){
         printf("[DEBUG] Failed to open room_codes file\n");
@@ -702,7 +702,7 @@ int generate_room_code(char *code){
 
 int join_room(int newsockfd,char *buffer,char *current_user,char *room_code){
     printf("[DEBUG] join_room() called for user: %s\n", current_user);
-    int fd=open("room_codes",O_RDONLY);
+    int fd=open("data/room_codes",O_RDONLY);
     printf("[DEBUG] room_codes fd: %d\n", fd);
     if(fd<0){
         printf("[DEBUG] Failed to open room_codes file\n");
@@ -797,7 +797,7 @@ int remove_room_code(char *code){
     printf("[DEBUG] remove_room_code() called for code: %s\n", code);
     pthread_mutex_lock(&room_lock);
     printf("[DEBUG] room_lock acquired\n");
-    int fd=open("room_codes",O_RDWR);
+    int fd=open("data/room_codes",O_RDWR);
     printf("[DEBUG] room_codes fd: %d\n", fd);
     if(fd<0){
         printf("[DEBUG] Failed to open room_codes file\n");
