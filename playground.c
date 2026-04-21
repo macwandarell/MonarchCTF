@@ -1,22 +1,26 @@
 #include "playground.h"
 
 char* active_rooms[5]={NULL};
+int active_users[5]={0};
 int current_active=0;
 pthread_mutex_t playground_lock=PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t playground_problem_lock=PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t playground_user_lock=PTHREAD_MUTEX_INITIALIZER;
-
+pthread_mutex_t playground_active_lock=PTHREAD_MUTEX_INITIALIZER;
 
 void new_room_setup(char *code){
     pthread_mutex_lock(&playground_problem_lock);
     char path[256];
     snprintf(path,sizeof(path),"/home/ctf/%s",code);
+    char prob_path[300];
+    snprintf(prob_path,sizeof(prob_path),"%s/problems",path);
     mkdir(path,S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH);
+    mkdir(prob_path, S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH);
     char cmd[512];
     snprintf(cmd,sizeof(cmd),"cp -r /home/ctf/jail/* %s/",path);
     system(cmd);
     bzero(cmd,sizeof(cmd));
-    snprintf(cmd,sizeof(cmd),"cp -r /home/ctf/problems/* %s/",path);
+    snprintf(cmd,sizeof(cmd),"cp -r /home/ctf/problems/* %s/",prob_path);
     system(cmd);
     pthread_mutex_unlock(&playground_problem_lock);
 }
@@ -107,10 +111,12 @@ int remove_problem(char *problem){
 
 
 int run_playground(int newsockfd,char *code){
+    pthread_mutex_lock(&playground_active_lock);
     int exists=0;
     for(int i=0;i<max_rooms;i++){
         if(active_rooms[i]!=NULL && strncmp(code,active_rooms[i],10)==0){
-            exists=1;
+            active_users[i]+=1;
+            exists=i;
             break;
         }
     }
@@ -119,9 +125,12 @@ int run_playground(int newsockfd,char *code){
             error("Active rooms limit reached",1);
             return 1;
         }
-        active_rooms[current_active]=strdup(code);current_active++;
+        active_rooms[current_active]=strdup(code);
+        active_users[current_active]=1;
+        current_active++;   
         new_room_setup(code);
     }
+    pthread_mutex_unlock(&playground_active_lock);
     int main_fd;
     pid_t pid;
     pid=forkpty(&main_fd,NULL,NULL,NULL);
@@ -177,6 +186,12 @@ int run_playground(int newsockfd,char *code){
             error("dropping priveliges failed",1);
             return 1;
         }
+        struct rlimit rl;
+        //memory limit
+        rl.rlim_cur=256*1024*1024;
+        rl.rlim_max=256*1024*1024;
+        setrlimit(RLIMIT_AS,&rl);
+
         pthread_mutex_unlock(&playground_user_lock);
         execl("/bin/bash","bash",NULL);
         error("execl error",1);
@@ -235,6 +250,8 @@ int run_playground(int newsockfd,char *code){
             }}
         }
     }
+    pthread_mutex_lock(&playground_active_lock);
+    if(active_users[exists]==1){
     for(int i=0;i<max_rooms;i++){
         if(active_rooms[i]!=NULL && strncmp(code,active_rooms[i],10)==0){
             free(active_rooms[i]);
@@ -250,7 +267,9 @@ int run_playground(int newsockfd,char *code){
     snprintf(path,sizeof(path),"/home/ctf/%s",code);
     char cmd[512];
     snprintf(cmd,sizeof(cmd),"rm -r %s",path);
-    system(cmd);
+    system(cmd);}
+    active_users[exists]-=1;
+    pthread_mutex_unlock(&playground_active_lock);
     close(main_fd);
     wait(NULL);
     return 0;
@@ -346,4 +365,32 @@ int points_handler(int newsockfd,char *code){
         return 1;
     }
     return 0;
+}
+
+
+int add_new_command(char *name){
+    pthread_mutex_lock(&playground_problem_lock);
+    char src[PATH_MAX];
+    char real_path[PATH_MAX];
+    char cmd[8192];
+    
+    snprintf(src,sizeof(src),"/bin/%s",name);
+
+    if(access(src,X_OK)!=0){
+        error("File doesnt exists",1);
+        return 1;
+    }
+    if(!realpath(src,real_path)){
+        error("Error resolving path",1);
+        return 1;
+    }
+    snprintf(cmd,sizeof(cmd),"cp -n '%s' /home/ctf/jail/bin/",real_path);
+    system(cmd);
+
+    snprintf(cmd,sizeof(cmd),"ldd '%s' | awk '{print $3}' | grep '/' | xargs -I{} cp -n {} /home/ctf/jail/lib/",real_path);
+    system(cmd);
+    system("cp -n /lib64/ld-linux-x86-64.so.2 /home/ctf/jail/lib64/");
+    pthread_mutex_unlock(&playground_problem_lock);
+    return 0;
+
 }

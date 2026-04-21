@@ -20,6 +20,8 @@
 #include "room.h"
 #include <pwd.h>
 #include <grp.h>
+#include <sys/resource.h>
+#include <linux/limits.h>
 
 
 
@@ -29,10 +31,12 @@
 #define max_rooms 5
 
 extern char* active_rooms[5];
+extern int active_users[5];
 extern int current_active;
 extern pthread_mutex_t playground_lock;
 extern pthread_mutex_t playground_problem_lock;
 extern pthread_mutex_t playground_user_lock;
+extern pthread_mutex_t playground_active_lock;
 
 int run_playground(int newsockfd,char *code);
 void new_room_setup(char *code);
@@ -41,5 +45,6 @@ int points_handler(int newsockfd,char *code);
 int add_new_problem(char *problem,char *solution);
 int solutions_file_opener();
 int remove_problem(char *problem);
+int add_new_command(char *name);
 
 #endif

@@ -20,7 +20,7 @@ int admin_handler(int newsockfd){
     int n;
     while(1){
     bzero(buffer,sizeof(buffer));
-    strcpy(buffer,"Welcome admin\n Options available:\n1. View all users\n2.View all rooms\n3.Remove a user\n4.Remove a room\n5.Add a problem to the playground\n6.Remove a problem from the playground\n7.Logout\n");
+    strcpy(buffer,"Welcome admin\n Options available:\n1. View all users\n2.View all rooms\n3.Remove a user\n4.Remove a room\n5.Add a problem to the playground\n6.Remove a problem from the playground\n7.Add a command to the sandbox.\n8.Logout\n");
     if(write(newsockfd,buffer,strlen(buffer))<0){
         error("Error writing to socket(admin options screen)",1);
         return 1;
@@ -173,6 +173,34 @@ int admin_handler(int newsockfd){
             return 1;}
     }
     else if(strcmp(buffer,"7")==0){
+        bzero(buffer,sizeof(buffer));
+        char command[26];
+        strcpy(buffer,"Enter command name to add:");
+        if(write(newsockfd,buffer,strlen(buffer))<0){
+            error("Error writing to socket(admin add command screen)",1);
+            return 1;}
+        n=read(newsockfd,buffer,sizeof(buffer));
+        if(n<0){
+            error("Error reading from socket(admin add command screen)",1);
+            return 1;}
+        buffer[n]='\0';buffer[strcspn(buffer,"\r\n")]='\0';
+        strncpy(command,buffer,25);
+        command[25]='\0';
+        if(add_new_command(command)){
+            bzero(buffer,sizeof(buffer));
+            strcpy(buffer,"Error occured adding the command(check if it actually exists)\n");
+        if(write(newsockfd,buffer,strlen(buffer))<0){
+            error("Error writing to socket(admin add command screen)",1);
+            return 1;}
+            continue;
+        }
+        bzero(buffer,sizeof(buffer));
+        strcpy(buffer,"Please check once if the command is added\n");
+        if(write(newsockfd,buffer,strlen(buffer))<0){
+            error("Error writing to socket(admin add command screen)",1);
+            return 1;}
+    }
+    else if(strcmp(buffer,"8")==0){
         admin_logout();
         break;
     }
