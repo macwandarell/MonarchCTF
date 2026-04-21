@@ -1,5 +1,15 @@
 #include "server.h"
 
+char *logo=
+"                                                                      \n"
+" ▄    ▄                                    █        ▄▄▄ ▄▄▄▄▄▄▄ ▄▄▄▄▄▄\n"
+" ██  ██  ▄▄▄   ▄ ▄▄    ▄▄▄    ▄ ▄▄   ▄▄▄   █ ▄▄   ▄▀   ▀   █    █     \n"
+" █ ██ █ █▀ ▀█  █▀  █  ▀   █   █▀  ▀ █▀  ▀  █▀  █  █        █    █▄▄▄▄▄\n"
+" █ ▀▀ █ █   █  █   █  ▄▀▀▀█   █     █      █   █  █        █    █     \n"
+" █    █ ▀█▄█▀  █   █  ▀▄▄▀█   █     ▀█▄▄▀  █   █   ▀▄▄▄▀   █    █     \n"
+"                                                                      \n";
+
+
 
 struct active_users active_user_list[max_clients];
 pthread_mutex_t server_lock=PTHREAD_MUTEX_INITIALIZER;
@@ -61,7 +71,8 @@ void *handle_client(void *arg){
         case AUTH:
                 printf("[DEBUG] Entering AUTH state\n");
                 bzero(buffer,sizeof(buffer));
-                strcpy(buffer,"Welcome to MonarchCTF! Please enter 1 if you want to register or 2 if you want to login:\n");
+                strcpy(buffer,logo);
+                strcat(buffer,"Welcome to MonarchCTF! Please enter 1 if you want to register or 2 if you want to login:\n");
                 printf("[DEBUG] Sending welcome message to client\n");
                 if(write(newsockfd,buffer,strlen(buffer))<0){
                     printf("[DEBUG] write() failed for welcome message\n");

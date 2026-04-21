@@ -18,7 +18,7 @@
 #include <signal.h>
 #include "playground.h"
 #define max_clients 5
-#define server_buffer 300
+#define server_buffer 1000
 struct active_users{
     char username[50];
     int socket;
@@ -31,6 +31,11 @@ enum State{
     LOGGED_EXIT,
     EXIT
 };
+
+
+
+extern char* logo;
+
 
 extern struct active_users active_user_list[max_clients];
 extern pthread_mutex_t server_lock;
