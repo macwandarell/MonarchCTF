@@ -1,0 +1,3 @@
+Here is your very first flag!
+
+MonarchCTF{w3l3c3m3_h0m3}

@@ -72,7 +72,7 @@ void *handle_client(void *arg){
                 printf("[DEBUG] Entering AUTH state\n");
                 bzero(buffer,sizeof(buffer));
                 strcpy(buffer,logo);
-                strcat(buffer,"Welcome to MonarchCTF! Please enter 1 if you want to register or 2 if you want to login or 3 for submissions or 4 for points:\n");
+                strcat(buffer,"Welcome to MonarchCTF!\nYou can select one of these:\n1)Register\n2)Login\n3)Make a Submission\n4)See Points\n");
                 printf("[DEBUG] Sending welcome message to client\n");
                 if(write(newsockfd,buffer,strlen(buffer))<0){
                     printf("[DEBUG] write() failed for welcome message\n");
@@ -516,7 +516,7 @@ void start_server(){
     char dev_path[360];
     snprintf(dev_path,sizeof(dev_path),"%s/dev",jail_path);
     char pts_path[380];
-    snprintf(pts_path,sizeof(pts_path),"%s/dev",dev_path);
+    snprintf(pts_path,sizeof(pts_path),"%s/pts",dev_path);
     mkdir(path,S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH);
     mkdir(jail_path,S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH);
     mkdir(bin_path,S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH);

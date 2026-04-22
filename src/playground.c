@@ -20,7 +20,7 @@ void new_room_setup(char *code){
     snprintf(cmd,sizeof(cmd),"cp -r /home/ctf/jail/* %s/",path);
     system(cmd);
     bzero(cmd,sizeof(cmd));
-    snprintf(cmd,sizeof(cmd),"mount -t devpts devpts /hom/ctf/%s/dev/pts",code);
+    snprintf(cmd,sizeof(cmd),"mountpoint -q /home/ctf/%s/dev/pts ||mount -t devpts devpts /home/ctf/%s/dev/pts",code,code);
     system(cmd);
     bzero(cmd,sizeof(cmd));
     snprintf(cmd,sizeof(cmd),"cp -r /home/ctf/problems/* %s/",prob_path);
@@ -115,7 +115,7 @@ int remove_problem(char *problem){
 
 int run_playground(int newsockfd,char *code){
     pthread_mutex_lock(&playground_active_lock);
-    int exists=0;
+    int exists=-1;
     for(int i=0;i<max_rooms;i++){
         if(active_rooms[i]!=NULL && strncmp(code,active_rooms[i],10)==0){
             active_users[i]+=1;
@@ -123,14 +123,15 @@ int run_playground(int newsockfd,char *code){
             break;
         }
     }
-    if(!exists){
+    if(exists==-1){
         if(current_active>=5){
             error("Active rooms limit reached",1);
             return 1;
         }
         active_rooms[current_active]=strdup(code);
         active_users[current_active]=1;
-        current_active++;   
+        exists=current_active;
+        current_active++;
         new_room_setup(code);
     }
     pthread_mutex_unlock(&playground_active_lock);
@@ -142,6 +143,8 @@ int run_playground(int newsockfd,char *code){
         return 1;
     }
     if(pid==0){
+    	setsid();
+    	setpgid(0,0);
         pthread_mutex_lock(&playground_user_lock);
         char username[64];
         char cmd[512];
@@ -237,13 +240,16 @@ int run_playground(int newsockfd,char *code){
     }}
     pthread_mutex_lock(&playground_active_lock);
     if(active_users[exists]==1){
+    close(main_fd);
+    wait(NULL);
+    printf("[DEBUG] Entered the most critical section\n");
     for(int i=0;i<max_rooms;i++){
         if(active_rooms[i]!=NULL && strncmp(code,active_rooms[i],10)==0){
             free(active_rooms[i]);
             for(int j=i;j<current_active-1;j++){
                 active_rooms[j]=active_rooms[j+1];
             }
-            active_rooms[current_active]=NULL;
+            active_rooms[current_active-1]=NULL;
             current_active--;
             break;
         }
@@ -251,8 +257,14 @@ int run_playground(int newsockfd,char *code){
     char path[256];
     snprintf(path,sizeof(path),"/home/ctf/%s",code);
     char cmd[512];
+    snprintf(cmd,sizeof(cmd),"umount -l /home/ctf/%s/dev/pts",code);
+    system(cmd);
+    bzero(cmd,sizeof(cmd));
     snprintf(cmd,sizeof(cmd),"rm -r %s",path);
-    system(cmd);}
+    system(cmd);
+	pthread_mutex_unlock(&playground_active_lock);
+	active_users[exists]-=1;
+	return 0;}
     active_users[exists]-=1;
     pthread_mutex_unlock(&playground_active_lock);
     close(main_fd);
