@@ -19,9 +19,9 @@ void new_room_setup(char *code){
     char cmd[512];
     snprintf(cmd,sizeof(cmd),"cp -r /home/ctf/jail/* %s/",path);
     system(cmd);
-    bzero(cmd,sizeof(cmd));
+    /*bzero(cmd,sizeof(cmd));
     snprintf(cmd,sizeof(cmd),"mountpoint -q /home/ctf/%s/dev/pts ||mount -t devpts devpts /home/ctf/%s/dev/pts",code,code);
-    system(cmd);
+    system(cmd);*/
     bzero(cmd,sizeof(cmd));
     snprintf(cmd,sizeof(cmd),"cp -r /home/ctf/problems/* %s/",prob_path);
     system(cmd);
@@ -126,7 +126,6 @@ int run_playground(int newsockfd,char *code){
     if(exists==-1){
         if(current_active>=5){
             error("Active rooms limit reached",1);
-            pthread_mutex_unlock(&playground_active_lock);
             return 1;
         }
         active_rooms[current_active]=strdup(code);
@@ -146,6 +145,7 @@ int run_playground(int newsockfd,char *code){
     if(pid==0){
     	setsid();
     	setpgid(0,0);
+    	closefrom(3);
         pthread_mutex_lock(&playground_user_lock);
         char username[64];
         char cmd[512];
@@ -168,6 +168,11 @@ int run_playground(int newsockfd,char *code){
             error("chdir failed",1);
             return 1;
         }
+        unshare(CLONE_NEWNS);
+	mount(NULL, "/", NULL, MS_REC | MS_PRIVATE, NULL);
+	char devpts_path[256];
+	snprintf(devpts_path, sizeof(devpts_path), "/home/ctf/%s/dev/pts", code);
+	mount("devpts", devpts_path, "devpts", 0, "newinstance,ptmxmode=0666,mode=0620");
         if(chroot(".")!=0){
             error("chroot failed",1);
             return 1;
@@ -258,8 +263,9 @@ int run_playground(int newsockfd,char *code){
     char path[256];
     snprintf(path,sizeof(path),"/home/ctf/%s",code);
     char cmd[512];
+    /*
     snprintf(cmd,sizeof(cmd),"umount -l /home/ctf/%s/dev/pts",code);
-    system(cmd);
+    system(cmd);*/
     bzero(cmd,sizeof(cmd));
     snprintf(cmd,sizeof(cmd),"rm -r %s",path);
     system(cmd);
@@ -277,10 +283,10 @@ int run_playground(int newsockfd,char *code){
 
 
 //the solutions logic i am cutting off for now
-//instead simply what i will do is i will add a .zip file manually which has the password of the zip as the solution to the ctf problem, if user can open that zip then they are done
-//i actually have to make another script which simply can call these below functions when the user does submit or points
+//i am doing simply the user can check the solutions and the points using room code
+//to do something better,i actually have to make another script which simply can call these below functions when the user does submit or points
 //the script in itself is correct, it just needs to be wrapped around something to make it work
-//something like a helper script running in the bash which can call these backend functions
+//something like a helper script running in the shell which can call these backend functions
 
 
 
