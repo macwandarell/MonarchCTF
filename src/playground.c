@@ -126,6 +126,7 @@ int run_playground(int newsockfd,char *code){
     if(exists==-1){
         if(current_active>=5){
             error("Active rooms limit reached",1);
+            pthread_mutex_unlock(&playground_active_lock);
             return 1;
         }
         active_rooms[current_active]=strdup(code);
