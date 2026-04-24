@@ -6,9 +6,11 @@ A multi-user shared CTF-room environment mainly focused on forensics challenges 
 ## Dependencies
 - openssl
 - POSIX threads
+- lifuse3-dev
 
 ## Instructions
 - For Admin/Server
+  - Do ' echo "user_allow_other " >> /etc/fuse.conf ' (first time setup only)
   - First run the server using "./build/main 0"
   - You can change the admin password from the server.c file (highly recommended to do so)
   - To add problems, first make the problem and its description inside the questions/ directory
@@ -29,9 +31,11 @@ A multi-user shared CTF-room environment mainly focused on forensics challenges 
 - Sandboxing has been done using chroot
 - Users are restricted to a "jail" and can only run binaries specified by the admin
 - Users can submit answers and check points and contribute to their teams
+- Using FUSE for concurrency control in shared rooms
 
 ## Future additions
-Currently, room-level isolation is implemented, however inside a room, users still need to collaborate, we want to add isolation features at user level in the future (basically what kernel does, since pty by itself cant do that)
+~~Currently, room-level isolation is implemented, however inside a room, users still need to collaborate, we want to add isolation features at user level in the future (basically what kernel does, since pty by itself cant do that)~~
+We have implemented concurrency control using FUSE, we need to enhance this feature itself by making it more rigid and by adding more syscalls.
 
 Furthermore, we want to support more types of challenges, even right now, admin/server can basically add the required binaries to solve cryptography and binary exploitation. But, we want to add actual interface which can help users to reverse engineering, web-exploitation and osint as well using server-resources itself, which will also be required to run on low latency.
 
@@ -42,6 +46,8 @@ Make the "jail" enviroment very secure, right now, it is minimal, and as we will
 Some of the demo challenges which are used are sourced from https://play.picoctf.org/ 
 
 All rights to those challenges belong to their respective creators. A huge respect to their team.
+
+libfuse (https://github.com/libfuse/libfuse)
 
 ## Inspiration
 The idea of the platform itself is inspired by my interest in CTF and the idea of creating an environment in which the user can solve challenges without having to install tools on their system. The name "MonarchCTF" is inspired by ML.Iseria, also known as "Monarch of the sword" from the game Epic7, which basically reflects dominance.
