@@ -8,6 +8,7 @@ pthread_mutex_t playground_problem_lock=PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t playground_user_lock=PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t playground_active_lock=PTHREAD_MUTEX_INITIALIZER;
 
+
 void new_room_setup(char *code){
     pthread_mutex_lock(&playground_problem_lock);
     char path[256];
@@ -19,12 +20,29 @@ void new_room_setup(char *code){
     char cmd[512];
     snprintf(cmd,sizeof(cmd),"cp -r /home/ctf/jail/* %s/",path);
     system(cmd);
+    bzero(cmd,sizeof(cmd));
+    snprintf(cmd,sizeof(cmd),"chown -R team_%s:team_%s /home/ctf/%s_real",code,code,code);
+    system(cmd);
     /*bzero(cmd,sizeof(cmd));
     snprintf(cmd,sizeof(cmd),"mountpoint -q /home/ctf/%s/dev/pts ||mount -t devpts devpts /home/ctf/%s/dev/pts",code,code);
     system(cmd);*/
+    struct fuse_thread_args* fuse_args=malloc(sizeof(struct fuse_thread_args));
+    snprintf(fuse_args->mountpoint,256,"%s",prob_path);
+    snprintf(fuse_args->real_root,256,"/home/ctf/%s_real/problems",code);
     bzero(cmd,sizeof(cmd));
-    snprintf(cmd,sizeof(cmd),"cp -r /home/ctf/problems/* %s/",prob_path);
+    char real_share_path[350];
+    snprintf(real_share_path,sizeof(real_share_path),"/home/ctf/%s_real",code);
+    char real_prob_path[400];
+    snprintf(real_prob_path,sizeof(real_prob_path),"%s/problems",real_share_path);
+    mkdir(real_share_path,S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH);
+    mkdir(real_prob_path, S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH);
+    snprintf(cmd,sizeof(cmd),"cp -r /home/ctf/problems/* /home/ctf/%s_real/problems/",code);
     system(cmd);
+    pid_t fuse_pid=fork();
+    if(fuse_pid==0){
+    	start_fuse(fuse_args);
+    	exit(0);
+    }
     pthread_mutex_unlock(&playground_problem_lock);
 }
 
@@ -266,6 +284,8 @@ int run_playground(int newsockfd,char *code){
     /*
     snprintf(cmd,sizeof(cmd),"umount -l /home/ctf/%s/dev/pts",code);
     system(cmd);*/
+    snprintf(cmd,sizeof(cmd),"fusermount -uz %s/problems",path);
+    system(cmd);
     bzero(cmd,sizeof(cmd));
     snprintf(cmd,sizeof(cmd),"rm -r %s",path);
     system(cmd);
