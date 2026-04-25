@@ -1,13 +1,19 @@
 #include "playground.h"
 
-char* active_rooms[5]={NULL};
-int active_users[5]={0};
+char* active_rooms[max_rooms]={NULL};
+int active_users[max_rooms]={0};
+pid_t room_pids[max_rooms][max_user_per_room]={{0}};
 int current_active=0;
 pthread_mutex_t playground_lock=PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t playground_problem_lock=PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t playground_user_lock=PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t playground_active_lock=PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t playground_room_pid_lock=PTHREAD_MUTEX_INITIALIZER;
 
+
+void handle_termination(int sig){
+	_exit(0);
+}
 
 void new_room_setup(char *code){
     pthread_mutex_lock(&playground_problem_lock);
@@ -20,6 +26,9 @@ void new_room_setup(char *code){
     char cmd[512];
     snprintf(cmd,sizeof(cmd),"cp -r /home/ctf/jail/* %s/",path);
     system(cmd);
+      char real_share_path[350];
+    snprintf(real_share_path,sizeof(real_share_path),"/home/ctf/%s_real",code);
+    mkdir(real_share_path,S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH);
     bzero(cmd,sizeof(cmd));
     snprintf(cmd,sizeof(cmd),"chown -R team_%s:team_%s /home/ctf/%s_real",code,code,code);
     system(cmd);
@@ -30,11 +39,8 @@ void new_room_setup(char *code){
     snprintf(fuse_args->mountpoint,256,"%s",prob_path);
     snprintf(fuse_args->real_root,256,"/home/ctf/%s_real/problems",code);
     bzero(cmd,sizeof(cmd));
-    char real_share_path[350];
-    snprintf(real_share_path,sizeof(real_share_path),"/home/ctf/%s_real",code);
     char real_prob_path[400];
     snprintf(real_prob_path,sizeof(real_prob_path),"%s/problems",real_share_path);
-    mkdir(real_share_path,S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH);
     mkdir(real_prob_path, S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH);
     snprintf(cmd,sizeof(cmd),"cp -r /home/ctf/problems/* /home/ctf/%s_real/problems/",code);
     system(cmd);
@@ -142,7 +148,7 @@ int run_playground(int newsockfd,char *code){
         }
     }
     if(exists==-1){
-        if(current_active>=5){
+        if(current_active>=max_clients){
             error("Active rooms limit reached",1);
             return 1;
         }
@@ -175,6 +181,7 @@ int run_playground(int newsockfd,char *code){
         pw=getpwnam(username);
         if(!pw){
             error("getpwnam failed after adding user",1);
+            pthread_mutex_unlock(&playground_user_lock);
             return 1;
         }}
         bzero(cmd,sizeof(cmd));
@@ -184,7 +191,9 @@ int run_playground(int newsockfd,char *code){
         snprintf(root_path,sizeof(root_path),"/home/ctf/%s",code);
         if(chdir(root_path)!=0){
             error("chdir failed",1);
+       	    pthread_mutex_unlock(&playground_user_lock);
             return 1;
+            
         }
         unshare(CLONE_NEWNS);
 	mount(NULL, "/", NULL, MS_REC | MS_PRIVATE, NULL);
@@ -193,27 +202,33 @@ int run_playground(int newsockfd,char *code){
 	mount("devpts", devpts_path, "devpts", 0, "newinstance,ptmxmode=0666,mode=0620");
         if(chroot(".")!=0){
             error("chroot failed",1);
+            pthread_mutex_unlock(&playground_user_lock);
             return 1;
         }
         if(chdir("/")!=0){
             error("chdir failed",1);
+                    	pthread_mutex_unlock(&playground_user_lock);
             return 1;
         }
         
         if(!pw){
             error("getpwnam failure",1);
+                    	pthread_mutex_unlock(&playground_user_lock);
             return 1;
         }
         if(setgroups(0,NULL)!=0){
             error("setgroups failure",1);
+                    	pthread_mutex_unlock(&playground_user_lock);
             return 1;
         }
         if(setgid(pw->pw_gid)!=0){
             error("dropping priveliges failed",1);
+                    	pthread_mutex_unlock(&playground_user_lock);
             return 1;
         }
         if(setuid(pw->pw_uid)!=0){
             error("dropping priveliges failed",1);
+                    	pthread_mutex_unlock(&playground_user_lock);
             return 1;
         }
         struct rlimit rl;
@@ -223,10 +238,19 @@ int run_playground(int newsockfd,char *code){
         setrlimit(RLIMIT_AS,&rl);
 	setenv("TERM","xterm-256color",1);
         pthread_mutex_unlock(&playground_user_lock);
+        signal(SIGTERM,handle_termination);
         execl("/bin/bash","bash","-i",NULL);
         error("execl error",1);
         return 1;
     }
+    pthread_mutex_lock(&playground_room_pid_lock);
+    for(int j = 0; j <max_user_per_room; j++) {
+        if(room_pids[exists][j]==0) {
+            room_pids[exists][j]=pid;
+            break;
+        }
+    }
+    pthread_mutex_unlock(&playground_room_pid_lock);
     char buffer[playground_buffer];
     while(1){
         fd_set fds;
@@ -289,11 +313,30 @@ int run_playground(int newsockfd,char *code){
     bzero(cmd,sizeof(cmd));
     snprintf(cmd,sizeof(cmd),"rm -r %s",path);
     system(cmd);
+    bzero(cmd,sizeof(cmd));
+    snprintf(cmd,sizeof(cmd),"rm -r /home/ctf/%s_real",code);
+    system(cmd);
 	pthread_mutex_unlock(&playground_active_lock);
 	active_users[exists]-=1;
+	pthread_mutex_lock(&playground_room_pid_lock);
+    for(int i=0;i<max_user_per_room;i++) {
+    if(room_pids[exists][i]==pid) {
+        room_pids[exists][i]=0;
+        break;
+    	}
+	}
+    pthread_mutex_unlock(&playground_room_pid_lock);
 	return 0;}
     active_users[exists]-=1;
     pthread_mutex_unlock(&playground_active_lock);
+    pthread_mutex_lock(&playground_room_pid_lock);
+    for(int i=0;i<max_user_per_room;i++) {
+    if(room_pids[exists][i]==pid) {
+        room_pids[exists][i]=0;
+        break;
+    	}
+	}
+    pthread_mutex_unlock(&playground_room_pid_lock);
     close(main_fd);
     wait(NULL);
     return 0;
@@ -430,3 +473,31 @@ int add_new_command(char *name){
     return 0;
 
 }
+
+void kick_users(char *code){
+	pid_t local_pid_copy[max_user_per_room];
+	int count=0;
+	int room_index=-1;
+	pthread_mutex_lock(&playground_room_pid_lock);
+	for(int i=0;i<max_rooms;i++){
+		if(active_rooms[i]&&strncmp(active_rooms[i],code,10)==0){
+		room_index=i;
+		for(int j=0;j<max_user_per_room;j++){
+			if(room_pids[i][j]>0){
+				local_pid_copy[count++]=room_pids[i][j];
+	
+			}}
+			break;
+		}}
+	pthread_mutex_unlock(&playground_room_pid_lock);
+	for(int i=0;i<count;i++){
+		pid_t pid=local_pid_copy[i];
+		printf("[DEBUG] kicking from room %s with pid %d\n",code,pid);
+		if(kill(-pid,SIGTERM)!=0){printf("[DEBUG]sigterm failed\n");}
+		sleep(1);
+		kill(-pid, SIGKILL);
+	}
+	
+}
+
+

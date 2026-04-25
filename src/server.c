@@ -497,6 +497,8 @@ void start_server(){
     snprintf(path,sizeof(path),"/home/ctf");
     char jail_path[300];
     snprintf(jail_path,sizeof(jail_path),"/home/ctf/jail");
+    char prob_dir[320];
+    snprintf(prob_dir,sizeof(prob_dir),"%s/problems",path);
     char bin_path[320];
     snprintf(bin_path,sizeof(bin_path),"%s/bin",jail_path);
     char lib_path[320];
@@ -518,6 +520,7 @@ void start_server(){
     char pts_path[380];
     snprintf(pts_path,sizeof(pts_path),"%s/pts",dev_path);
     mkdir(path,S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH);
+    mkdir(prob_dir,S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH);
     mkdir(jail_path,S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH);
     mkdir(bin_path,S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH);
     mkdir(lib_path,S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH);

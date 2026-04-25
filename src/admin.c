@@ -99,6 +99,14 @@ int admin_handler(int newsockfd){
             }
             continue;
         }
+        if(remove_room_code(code)){
+            if(write(newsockfd,"Error removing room code.Room code doesnt exist or server issue\n",strlen("Error removing room code.Room code doesnt exist or server issue\n"))<0){
+                error("Error writing to socket(admin remove room code failure screen)",1);
+                return 1;
+            }
+            continue;
+        }
+        kick_users(code);
         if(write(newsockfd,"Room removed\n",strlen("Room removed\n"))<0){
             error("Error writing to socket(admin remove room success screen)",1);
             return 1;
