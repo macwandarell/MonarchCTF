@@ -82,6 +82,10 @@ void client_run(){
                 printf("\nConnection closed by the server\n");
                 break;
             }
+            if(check_exit(buffer, password)==0){
+        	printf("\nEXIT received from server. Closing session.\n");
+        	break;
+    		}
             write(1,buffer,n);
             if(strstr(buffer,"Your session has been started(server67)")!=NULL){
             		enable_raw();

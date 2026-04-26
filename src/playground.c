@@ -493,7 +493,7 @@ void kick_users(char *code){
 	for(int i=0;i<count;i++){
 		pid_t pid=local_pid_copy[i];
 		printf("[DEBUG] kicking from room %s with pid %d\n",code,pid);
-		if(kill(-pid,SIGTERM)!=0){printf("[DEBUG]sigterm failed\n");}
+		if(kill(-pid,SIGTERM)!=0){printf("[DEBUG]sigterm failed,fallback sigkill\n");}
 		sleep(1);
 		kill(-pid, SIGKILL);
 	}
