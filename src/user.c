@@ -78,7 +78,7 @@ int user_check(char *username,char *password){
         char *token2 = strtok(NULL, ":");
         char *token3 = strtok(NULL, ":");
 
-        if(token1 && strcmp(token1, username) == 0&& strcmp(token3,"0")==0){
+        if(token1 && strcmp(token1, username) == 0&&strcmp(token2,password)==0&& strcmp(token3,"0")==0){
             off_t offset = lseek(fd, 0, SEEK_CUR) - strlen(token3) - 1;
             lseek(fd, offset, SEEK_SET);
             if(write(fd,"1",1)<0){
